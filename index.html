@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>菜々子バトル</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>👶</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 合言葉ゲート -->
+  <div id="lock-screen" class="screen">
+    <div class="lock-box">
+      <h1>菜々子バトル</h1>
+      <p>合言葉をどうぞ</p>
+      <input type="text" id="passphrase-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="passphrase-submit">けってい</button>
+      <p id="passphrase-error" class="error hidden">合言葉がちがうみたい…もう一度!</p>
+    </div>
+  </div>
+
+  <!-- ゲーム本体 -->
+  <div id="game-root" class="screen hidden">
+
+    <!-- タイトル -->
+    <div id="title-screen" class="screen">
+      <img class="title-peek title-peek-left" src="images/erina_smile.png" alt="">
+      <img class="title-peek title-peek-right" src="images/nanako_normal.png" alt="">
+      <div class="title-wrap">
+        <h1 class="title-logo">菜々子バトル</h1>
+        <p class="title-sub">〜 おうちモンスターストーリー 〜</p>
+        <button id="start-button" class="big-button">タップしてスタート</button>
+      </div>
+    </div>
+
+    <!-- 家の中（オーバーワールド） -->
+    <div id="overworld-screen" class="screen hidden">
+      <div class="canvas-wrap">
+        <canvas id="overworld-canvas"></canvas>
+        <div id="dialogue-box" class="dialogue-box hidden">
+          <p id="dialogue-text"></p>
+          <div class="dialogue-next">▼</div>
+        </div>
+      </div>
+      <div id="touch-controls">
+        <div id="dpad">
+          <button class="dpad-btn" data-dir="up">▲</button>
+          <button class="dpad-btn" data-dir="left">◀</button>
+          <button class="dpad-btn" data-dir="right">▶</button>
+          <button class="dpad-btn" data-dir="down">▼</button>
+        </div>
+        <button id="action-button" class="action-btn">A</button>
+      </div>
+    </div>
+
+    <!-- バトル -->
+    <div id="battle-screen" class="screen hidden">
+      <div id="battle-stage">
+        <div class="hp-panel hp-panel-baby">
+          <div class="hp-name-row"><span id="baby-name">ヤンチャな ナナコ</span></div>
+          <div class="hp-bar-track"><div id="baby-hp-fill" class="hp-bar-fill"></div></div>
+        </div>
+        <div class="hp-panel hp-panel-player">
+          <div class="hp-name-row"><span>エリナ</span></div>
+          <div class="hp-bar-track"><div id="player-hp-fill" class="hp-bar-fill"></div></div>
+        </div>
+
+        <div id="baby-platform" class="platform platform-baby"></div>
+        <div id="player-platform" class="platform platform-player"></div>
+
+        <img id="baby-sprite" class="battle-sprite baby-sprite" src="images/nanako_normal.png" alt="ナナコ">
+        <img id="player-sprite" class="battle-sprite player-sprite" src="images/erina_normal.png" alt="エリナ">
+
+        <div id="ball-sprite" class="ball-sprite hidden"></div>
+        <div id="fx-layer"></div>
+      </div>
+      <div id="battle-ui">
+        <div id="battle-message-box" class="dialogue-box hidden">
+          <p id="battle-message-text"></p>
+        </div>
+        <div id="command-menu" class="battle-menu hidden">
+          <button class="cmd-btn" data-cmd="fight">たたかう</button>
+          <button class="cmd-btn" data-cmd="catch">つかまえる</button>
+          <button class="cmd-btn" data-cmd="run">にげる</button>
+        </div>
+        <div id="move-menu" class="battle-menu hidden"></div>
+      </div>
+    </div>
+
+    <!-- エンディング -->
+    <div id="ending-screen" class="screen hidden">
+      <div class="ending-wrap">
+        <div id="ending-images">
+          <img id="ending-image" src="" alt="">
+          <span id="ending-heart" class="hidden">♥</span>
+          <img id="ending-image-2" src="" alt="" class="hidden">
+        </div>
+        <p id="ending-text"></p>
+        <button id="retry-button" class="big-button">タイトルへ</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/overworld.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
