@@ -6,7 +6,7 @@
   let currentScreen = 'lock-screen';
   let currentEncounter = null; // 'nanako' | 'hiroshi' | 'ikuko'
 
-  const flags = { nanakoRecruited: false, hiroshiDefeated: false, ikukoDefeated: false };
+  const flags = { nanakoRecruited: false, tomonoriRecruited: false, hiroshiDefeated: false, ikukoDefeated: false };
 
   const ERINA_MOVES = [
     { name: '鋭い眼光', power: 18, accuracy: 1.0, anim: 'glare', flavor: '瑛里奈の 鋭い眼光！' },
@@ -32,10 +32,28 @@
     { name: 'げきから手作り料理', power: 22, accuracy: 0.9, anim: 'spicy', flavor: 'イクコの げきから手作り料理！' },
     { name: 'カミナリ説教', power: 26, accuracy: 0.85, anim: 'scold', flavor: 'イクコの カミナリ説教！' },
   ];
+  const TOMONORI_MOVES = [
+    { name: '名刺ストレート', power: 18, accuracy: 1.0, anim: 'cardthrow', flavor: 'とものりの 名刺ストレート！' },
+    { name: '満員電車プレッシャー', power: 22, accuracy: 0.9, anim: 'crowd', flavor: 'とものりの 満員電車プレッシャー！' },
+    { name: '残業ラリアット', power: 26, accuracy: 0.85, anim: 'lariat', flavor: 'とものりの 残業ラリアット！' },
+    { name: '飲み会の愚痴', power: 4, accuracy: 1.0, anim: 'complain', effect: 'sleep', flavor: 'とものりの 飲み会の愚痴…' },
+  ];
+  const TRIO_MOVES = [
+    ERINA_MOVES[0],
+    NANAKO_MOVES[2],
+    TOMONORI_MOVES[2],
+    { name: 'トリプルファミリーアタック', power: 36, accuracy: 1.0, anim: 'combo', flavor: 'エリナ・ナナコ・とものりの トリプルファミリーアタック！！' },
+  ];
 
   const ROSTER = {
     erina: { name: 'エリナ', level: 5, sprite: 'images/erina_normal.png', moves: ERINA_MOVES },
     nanako: { name: 'ナナコ', level: 5, sprite: 'images/nanako_normal.png', moves: NANAKO_MOVES },
+    tomonori: { name: 'とものり', level: 5, sprite: 'images/tomonori_normal.png', moves: TOMONORI_MOVES },
+    trio: {
+      name: 'エリナ&ナナコ&とものり', level: 10, sprite: 'images/erina_normal.png',
+      teamSprites: ['images/erina_normal.png', 'images/nanako_normal.png', 'images/tomonori_normal.png'],
+      moves: TRIO_MOVES,
+    },
   };
   const ENEMIES = {
     nanako: {
@@ -46,10 +64,12 @@
     hiroshi: {
       name: '院長 ヒロシ', level: 5, sprite: 'images/hiroshi_normal.png', moves: HIROSHI_MOVES,
       bossTheme: true, faintLine: 'ヒロシ「・・・まいった。腕を 上げたな。」',
+      enrageMove: { name: 'バイク式ドリル爆走', power: 30, accuracy: 0.9, anim: 'bikeDrill', flavor: 'ヒロシは バイクを 走らせながら 歯科治療器具で 攻撃してきた！！' },
+      enrageThreshold: 0.3,
     },
     ikuko: {
       name: 'イクコ', level: 5, sprite: 'images/ikuko_normal.png', moves: IKUKO_MOVES,
-      bossTheme: true, faintLine: 'イクコ「あらあら、やられちゃったわ。」',
+      bossTheme: true, faintLine: 'イクコ「あらあら、やられちゃったわ。ヒロシさんは 強いわよ、気をつけてね。」',
     },
   };
 
@@ -98,6 +118,21 @@
     });
   }
 
+  function onPhoneUse() {
+    if (flags.tomonoriRecruited) {
+      Overworld.showDialogue('とものり「呼んでくれれば いつでも 駆けつけるよ！」', null);
+      return;
+    }
+    showDialogueSequence([
+      'エリナは とものりに 電話を かけた。',
+      'とものり「もしもし？ ……新社会人で 今 忙しいんだけど。」',
+      'とものり「姉ちゃんの 頼みなら……分かった、すぐ 行くよ！」',
+    ], () => {
+      flags.tomonoriRecruited = true;
+      Overworld.showDialogue('とものりが やってきた！ なかまに なった！', null);
+    });
+  }
+
   async function sha256Hex(text) {
     const enc = new TextEncoder().encode(text);
     const buf = await crypto.subtle.digest('SHA-256', enc);
@@ -137,6 +172,7 @@
 
   function resetFlags() {
     flags.nanakoRecruited = false;
+    flags.tomonoriRecruited = false;
     flags.hiroshiDefeated = false;
     flags.ikukoDefeated = false;
   }
@@ -196,7 +232,10 @@
   function openSelectScreen(enemyKey) {
     const cards = document.getElementById('select-cards');
     cards.innerHTML = '';
-    const keys = flags.nanakoRecruited ? ['erina', 'nanako'] : ['erina'];
+    const keys = ['erina'];
+    if (flags.nanakoRecruited) keys.push('nanako');
+    if (flags.tomonoriRecruited) keys.push('tomonori');
+    if (flags.nanakoRecruited && flags.tomonoriRecruited) keys.push('trio');
     keys.forEach(key => {
       const fighter = ROSTER[key];
       const card = document.createElement('button');
@@ -244,8 +283,8 @@
 
   function showFinalEnding() {
     showStoryBeat(
-      'images/nanako_normal.png',
-      '大沢家のみんなと なかよくなった！\n\n――― THE END ―――',
+      'images/hiroshi_normal.png',
+      'ヒロシを たおした！\n\nヒロシ「みんな 強かったな……お詫びに 魚太郎で 奢らせてくれ！」\n\nみんなで 魚太郎へ ごちそうに 行きました。\n\n――― THE END ―――',
       'タイトルへ',
       () => { resetFlags(); showGameScreen('title-screen'); },
       'images/erina_heart.png'
@@ -274,7 +313,10 @@
 
     if (enc === 'hiroshi' || enc === 'ikuko') {
       if (result === 'lost') {
-        showStoryBeat('images/erina_normal.png', 'やられてしまった…\n\n出直して 再挑戦しよう。', 'つづける', resumeOverworld);
+        const text = enc === 'hiroshi' && !flags.tomonoriRecruited
+          ? 'やられてしまった…\n\nエリナ「とものりを 呼びに 2階の 電話に 行かないと……」'
+          : 'やられてしまった…\n\n出直して 再挑戦しよう。';
+        showStoryBeat('images/erina_normal.png', text, 'つづける', resumeOverworld);
         return;
       }
       flags[enc + 'Defeated'] = true;
@@ -317,7 +359,7 @@
       if (e.key === 'Enter') checkPassphrase();
     });
 
-    Overworld.init(document.getElementById('overworld-canvas'), { onTalk, onChestOpen });
+    Overworld.init(document.getElementById('overworld-canvas'), { onTalk, onChestOpen, onPhoneUse });
     Overworld.enterFloor('FLOOR_2');
     Battle.init({ onEnd: handleBattleEnd });
     wireTouchControls();

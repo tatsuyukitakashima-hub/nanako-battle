@@ -8,7 +8,7 @@ const Battle = (() => {
   let enemyStatus, enemySleepTurns, playerPoisonTurns, turnLock;
   let onEndCallback = null;
 
-  let stage, fx, babySprite, playerSprite, ballSprite;
+  let stage, fx, babySprite, playerSprite, playerSprite2, playerSprite3, ballSprite;
   let babyHpFill, playerHpFill, babyNameEl, playerNameEl, babyLevelEl, playerLevelEl;
   let babyStatusBadges, playerStatusBadges;
   let msgBox, msgText, commandMenu, moveMenu, catchBtn;
@@ -26,6 +26,8 @@ const Battle = (() => {
     fx = document.getElementById('fx-layer');
     babySprite = document.getElementById('baby-sprite');
     playerSprite = document.getElementById('player-sprite');
+    playerSprite2 = document.getElementById('player-sprite-2');
+    playerSprite3 = document.getElementById('player-sprite-3');
     ballSprite = document.getElementById('ball-sprite');
     babyHpFill = document.getElementById('baby-hp-fill');
     playerHpFill = document.getElementById('player-hp-fill');
@@ -66,7 +68,19 @@ const Battle = (() => {
     turnLock = false;
 
     babySprite.src = enemy.sprite;
-    playerSprite.src = player.sprite;
+    if (player.teamSprites) {
+      playerSprite.src = player.teamSprites[0];
+      playerSprite2.src = player.teamSprites[1];
+      playerSprite3.src = player.teamSprites[2];
+      playerSprite.classList.add('trio-active');
+      playerSprite2.classList.remove('hidden');
+      playerSprite3.classList.remove('hidden');
+    } else {
+      playerSprite.src = player.sprite;
+      playerSprite.classList.remove('trio-active');
+      playerSprite2.classList.add('hidden');
+      playerSprite3.classList.add('hidden');
+    }
     babyNameEl.textContent = enemy.name;
     playerNameEl.textContent = player.name;
     babyLevelEl.textContent = 'Lv.' + enemy.level;
@@ -302,6 +316,39 @@ const Battle = (() => {
           shakeScreen(280);
           duration = 600;
           break;
+        case 'cardthrow':
+          spawnParticles('📇', casterEl, 'fly', 4, targetEl);
+          duration = 600;
+          break;
+        case 'crowd':
+          spawnParticles('🚃', casterEl, 'fly', 3, targetEl);
+          shakeScreen(320);
+          duration = 600;
+          break;
+        case 'lariat':
+          lungeToward(casterEl);
+          spawnParticles('💥', targetEl, '', 4);
+          shakeScreen(350);
+          duration = 470;
+          break;
+        case 'complain':
+          spawnParticles('💬', casterEl, '', 5);
+          duration = 800;
+          break;
+        case 'combo':
+          spawnParticles('💋', casterEl, 'fly', 3, targetEl);
+          spawnParticles('💥', casterEl, 'fly', 3, targetEl);
+          spawnParticles('✨', casterEl, 'fly', 3, targetEl);
+          shakeScreen(650);
+          duration = 850;
+          break;
+        case 'bikeDrill':
+          lungeToward(casterEl);
+          spawnParticles('💨', casterEl, '', 4);
+          spawnParticles('🦷', casterEl, 'fly', 3, targetEl);
+          shakeScreen(600);
+          duration = 650;
+          break;
       }
       setTimeout(resolve, duration);
     });
@@ -355,7 +402,8 @@ const Battle = (() => {
       await endTurnCycle();
       return;
     }
-    const move = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
+    const enraged = enemy.enrageMove && enemyHP <= enemyMaxHP * (enemy.enrageThreshold || 0.3);
+    const move = enraged ? enemy.enrageMove : enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
     await showMessage(move.flavor);
     await playAnim(move.anim, babySprite, playerSprite);
     const hit = Math.random() < move.accuracy;

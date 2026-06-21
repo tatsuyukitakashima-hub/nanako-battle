@@ -28,6 +28,7 @@ const Maps = (() => {
     armchair: { sheet: 'indoors', sx: 18 * T, sy: 19 * T, tw: 2, th: 2 },
     chest: { sheet: 'indoors', sx: 8 * T, sy: 18 * T, tw: 2, th: 2 },
     roundTable: { sheet: 'indoors', sx: 18 * T, sy: 16 * T, tw: 2, th: 2 },
+    phone: { custom: 'phone', tw: 1, th: 1 },
   };
 
   function blankGrid(cols, rows, fill) {
@@ -108,6 +109,7 @@ const Maps = (() => {
       { key: 'counterPlain', col: 1, row: 2 },
       { key: 'diningTable', col: 7, row: 5 },
       { key: 'roundTable', col: 2, row: 7 },
+      { key: 'phone', col: 11, row: 8 },
       { key: 'bedDouble', col: 1, row: 14 },
       { key: 'wardrobe', col: 3, row: 14 },
       { key: 'bedSingle', col: 11, row: 14 },

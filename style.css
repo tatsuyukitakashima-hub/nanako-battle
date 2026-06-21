@@ -306,6 +306,10 @@ canvas {
 }
 .baby-sprite { top: 12%; right: 12%; transform-origin: bottom center; }
 .player-sprite { top: 42%; left: 6%; height: 38%; transform-origin: bottom center; transform: scaleX(-1); }
+.player-sprite.trio-active { height: 26%; left: 2%; top: 48%; }
+.player-sprite-trio { height: 26%; transform-origin: bottom center; transform: scaleX(-1); }
+.player-sprite-trio.trio-2 { left: 20%; top: 56%; }
+.player-sprite-trio.trio-3 { left: 36%; top: 50%; }
 
 .hp-panel {
   position: absolute;

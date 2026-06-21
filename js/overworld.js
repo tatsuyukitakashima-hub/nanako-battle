@@ -134,9 +134,17 @@ const Overworld = (() => {
       return;
     }
     const obj = objectAt(col, row);
-    if (obj && obj.item && callbacks.onChestOpen) {
-      AudioEngine.playConfirm();
-      callbacks.onChestOpen(obj, floorKey);
+    if (obj) {
+      const def = Maps.OBJECT_DEFS[obj.key];
+      if (obj.item && callbacks.onChestOpen) {
+        AudioEngine.playConfirm();
+        callbacks.onChestOpen(obj, floorKey);
+        return;
+      }
+      if (def && def.custom === 'phone' && callbacks.onPhoneUse) {
+        AudioEngine.playConfirm();
+        callbacks.onPhoneUse();
+      }
     }
   }
 
@@ -189,8 +197,26 @@ const Overworld = (() => {
     }
   }
 
+  function drawPhoneIcon(col, row) {
+    const x = col * TILE, y = row * TILE;
+    ctx.fillStyle = '#3a3a45';
+    ctx.fillRect(x + 7, y + 6, TILE - 14, TILE - 12);
+    ctx.fillStyle = '#ffd54a';
+    ctx.fillRect(x + 10, y + 10, TILE - 20, 6);
+    const bob = Math.sin(t * 4) * 3;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.strokeText('☎ でんわ', x + TILE / 2, y - 6 + bob);
+    ctx.fillStyle = '#fff8e0';
+    ctx.fillText('☎ でんわ', x + TILE / 2, y - 6 + bob);
+    ctx.textAlign = 'left';
+  }
+
   function drawObject(obj) {
     const def = Maps.OBJECT_DEFS[obj.key];
+    if (def.custom === 'phone') { drawPhoneIcon(obj.col, obj.row); return; }
     const img = sheetImages[def.sheet];
     const dx = obj.col * TILE, dy = obj.row * TILE, dw = def.tw * TILE, dh = def.th * TILE;
     if (img && img.complete && img.naturalWidth > 0) {
