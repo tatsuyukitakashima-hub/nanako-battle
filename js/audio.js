@@ -136,78 +136,106 @@ const AudioEngine = (() => {
     activeLoopToken = null;
   }
 
-  // 3拍子4小節ぶんのオリジナル・チップチューン(オーバーワールド: のんびり)
+  // オーバーワールド: ハ長調・やわらかい音色のんびり歩く曲(4小節/16拍)
   const OVERWORLD_THEME = {
-    tempo: 96,
-    melodyType: 'triangle', melodyGain: 0.22,
-    bassType: 'sine', bassGain: 0.16,
+    tempo: 108,
+    melodyType: 'sine', melodyGain: 0.22,
+    bassType: 'sine', bassGain: 0.15,
+    harmonyType: 'triangle', harmonyGain: 0.1,
+    percussionGain: 0.12,
     melody: [
-      { note: 'C4', beats: 1 }, { note: 'E4', beats: 1 }, { note: 'G4', beats: 1 }, { note: 'E4', beats: 1 },
-      { note: 'F4', beats: 1 }, { note: 'A4', beats: 1 }, { note: 'G4', beats: 1 }, { note: 'E4', beats: 1 },
-      { note: 'D4', beats: 1 }, { note: 'F4', beats: 1 }, { note: 'A4', beats: 1 }, { note: 'F4', beats: 1 },
-      { note: 'C4', beats: 2 }, { note: '-', beats: 2 }
+      { note: 'C4', beats: 1 }, { note: 'D4', beats: 1 }, { note: 'E4', beats: 1 }, { note: 'G4', beats: 1 },
+      { note: 'F4', beats: 1 }, { note: 'E4', beats: 1 }, { note: 'D4', beats: 1 }, { note: 'C4', beats: 1 },
+      { note: 'A4', beats: 1 }, { note: 'G4', beats: 1 }, { note: 'F4', beats: 1 }, { note: 'E4', beats: 1 },
+      { note: 'D4', beats: 2 }, { note: 'C4', beats: 2 }
     ],
     bassline: [
-      { note: 'C3', beats: 2 }, { note: 'G3', beats: 2 },
-      { note: 'F3', beats: 2 }, { note: 'C3', beats: 2 },
-      { note: 'D3', beats: 2 }, { note: 'F3', beats: 2 },
+      { note: 'C3', beats: 2 }, { note: 'C3', beats: 2 },
+      { note: 'F3', beats: 2 }, { note: 'F3', beats: 2 },
+      { note: 'G3', beats: 2 }, { note: 'G3', beats: 2 },
       { note: 'C3', beats: 4 }
-    ]
-  };
-
-  // バトル: アップテンポ(3小節ループ/12拍)
-  const BATTLE_THEME = {
-    tempo: 168,
-    melodyType: 'square', melodyGain: 0.2,
-    bassType: 'square', bassGain: 0.16,
-    melody: [
-      { note: 'E4', beats: 0.5 }, { note: 'E4', beats: 0.5 }, { note: '-', beats: 0.5 }, { note: 'E4', beats: 0.5 },
-      { note: '-', beats: 0.5 }, { note: 'C4', beats: 0.5 }, { note: 'E4', beats: 0.5 }, { note: '-', beats: 0.5 },
-      { note: 'G4', beats: 1 }, { note: '-', beats: 1 }, { note: 'G3', beats: 1 }, { note: '-', beats: 1 },
-      { note: 'C4', beats: 0.5 }, { note: '-', beats: 0.5 }, { note: 'G3', beats: 0.5 }, { note: '-', beats: 0.5 },
-      { note: 'E3', beats: 0.5 }, { note: '-', beats: 0.5 }, { note: 'A3', beats: 0.5 }, { note: '-', beats: 0.5 }
-    ],
-    bassline: [
-      { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 },
-      { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 },
-      { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'E3', beats: 1 }, { note: 'E3', beats: 1 }
-    ]
-  };
-
-  // ボス戦(ヒロシ・イクコ): 四天王/ジムリーダー戦のような速さ・音数で緊張感を出すオリジナル新曲
-  const BOSS_THEME = {
-    tempo: 192,
-    melodyType: 'square', melodyGain: 0.2,
-    bassType: 'square', bassGain: 0.18,
-    harmonyType: 'triangle', harmonyGain: 0.13,
-    percussionGain: 0.32,
-    melody: [
-      { note: 'E5', beats: 0.5 }, { note: 'G5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'C5', beats: 0.5 },
-      { note: 'D5', beats: 0.5 }, { note: 'F5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'A4', beats: 0.5 },
-      { note: 'E5', beats: 0.5 }, { note: 'G5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'C5', beats: 0.5 },
-      { note: 'B4', beats: 1 }, { note: '-', beats: 1 },
-      { note: 'G5', beats: 0.5 }, { note: 'F5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'D5', beats: 0.5 },
-      { note: 'C5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: '-', beats: 0.5 },
-      { note: 'A4', beats: 1 }, { note: 'G4', beats: 1 },
-      { note: 'C5', beats: 2 }
-    ],
-    bassline: [
-      { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 },
-      { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 },
-      { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 },
-      { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }
     ],
     harmony: [
-      { note: 'A4', beats: 2 }, { note: 'E4', beats: 2 },
-      { note: 'F4', beats: 2 }, { note: 'C4', beats: 2 },
-      { note: 'C5', beats: 2 }, { note: 'G4', beats: 2 },
+      { note: 'E4', beats: 2 }, { note: 'G4', beats: 2 },
+      { note: 'A4', beats: 2 }, { note: 'G4', beats: 2 },
+      { note: 'C5', beats: 2 }, { note: 'B4', beats: 2 },
       { note: 'G4', beats: 4 }
+    ],
+    percussion: [
+      { hit: true, beats: 1 }, { hit: false, beats: 3 },
+      { hit: true, beats: 1 }, { hit: false, beats: 3 },
+      { hit: true, beats: 1 }, { hit: false, beats: 3 },
+      { hit: true, beats: 1 }, { hit: false, beats: 3 }
+    ]
+  };
+
+  // 通常バトル(ナナコ戦): ト長調・コミカルで軽快な曲(3小節/12拍)
+  const BATTLE_THEME = {
+    tempo: 174,
+    melodyType: 'square', melodyGain: 0.2,
+    bassType: 'square', bassGain: 0.16,
+    harmonyType: 'triangle', harmonyGain: 0.1,
+    percussionGain: 0.26,
+    melody: [
+      { note: 'G4', beats: 0.5 }, { note: 'A4', beats: 0.5 }, { note: 'B4', beats: 0.5 }, { note: 'G4', beats: 0.5 },
+      { note: 'D5', beats: 0.5 }, { note: 'B4', beats: 0.5 }, { note: 'G4', beats: 0.5 }, { note: '-', beats: 0.5 },
+      { note: 'A4', beats: 0.5 }, { note: 'B4', beats: 0.5 }, { note: 'C5', beats: 0.5 }, { note: 'A4', beats: 0.5 },
+      { note: 'E5', beats: 0.5 }, { note: 'C5', beats: 0.5 }, { note: 'A4', beats: 0.5 }, { note: '-', beats: 0.5 },
+      { note: 'B4', beats: 1 }, { note: 'A4', beats: 1 }, { note: 'G4', beats: 2 }
+    ],
+    bassline: [
+      { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'D3', beats: 1 }, { note: 'D3', beats: 1 },
+      { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'E3', beats: 1 }, { note: 'E3', beats: 1 },
+      { note: 'G3', beats: 2 }, { note: 'G3', beats: 2 }
+    ],
+    harmony: [
+      { note: 'B4', beats: 4 }, { note: 'C5', beats: 4 }, { note: 'D5', beats: 4 }
     ],
     percussion: [
       { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
       { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
-      { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
       { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 }
+    ]
+  };
+
+  // ボス戦(ヒロシ・イクコ): イ短調・ノコギリ波でドラマチックな四天王風の新曲(4小節/16拍)
+  const BOSS_THEME = {
+    tempo: 200,
+    melodyType: 'sawtooth', melodyGain: 0.16,
+    bassType: 'square', bassGain: 0.18,
+    harmonyType: 'triangle', harmonyGain: 0.13,
+    percussionGain: 0.34,
+    melody: [
+      { note: 'A4', beats: 0.5 }, { note: 'C5', beats: 0.5 }, { note: 'A4', beats: 0.5 }, { note: 'E4', beats: 0.5 },
+      { note: 'F4', beats: 0.5 }, { note: 'A4', beats: 0.5 }, { note: 'F4', beats: 0.5 }, { note: 'C4', beats: 0.5 },
+      { note: 'A4', beats: 0.5 }, { note: 'C5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'C5', beats: 0.5 },
+      { note: 'B4', beats: 1 }, { note: '-', beats: 1 },
+      { note: 'E5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'C5', beats: 0.5 }, { note: 'B4', beats: 0.5 },
+      { note: 'A4', beats: 0.5 }, { note: 'G4', beats: 0.5 }, { note: 'A4', beats: 0.5 }, { note: '-', beats: 0.5 },
+      { note: 'B4', beats: 1 }, { note: 'C5', beats: 1 },
+      { note: 'A4', beats: 2 }
+    ],
+    bassline: [
+      { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 },
+      { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 },
+      { note: 'D3', beats: 1 }, { note: 'D3', beats: 1 }, { note: 'D3', beats: 1 }, { note: 'D3', beats: 1 },
+      { note: 'E3', beats: 1 }, { note: 'E3', beats: 1 }, { note: 'E3', beats: 1 }, { note: 'E3', beats: 1 }
+    ],
+    harmony: [
+      { note: 'C5', beats: 2 }, { note: 'A4', beats: 2 },
+      { note: 'A4', beats: 2 }, { note: 'F4', beats: 2 },
+      { note: 'F4', beats: 2 }, { note: 'D4', beats: 2 },
+      { note: 'E4', beats: 4 }
+    ],
+    percussion: [
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 },
+      { hit: true, beats: 0.5 }, { hit: false, beats: 0.5 }, { hit: true, beats: 0.5 }, { hit: true, beats: 0.5 }
     ]
   };
 

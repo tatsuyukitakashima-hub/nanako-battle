@@ -112,9 +112,9 @@ const Maps = (() => {
       { key: 'wardrobe', col: 3, row: 14 },
       { key: 'bedSingle', col: 11, row: 14 },
       { key: 'roundTable', col: 2, row: 22 },
-      { key: 'chest', col: 2, row: 24 },
+      { key: 'chest', col: 2, row: 24, item: 'diaper' },
       { key: 'bookshelf', col: 11, row: 22 },
-      { key: 'chest', col: 11, row: 24 },
+      { key: 'chest', col: 11, row: 24, item: 'mizotakuSticker' },
     ];
 
     return {

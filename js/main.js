@@ -53,6 +53,51 @@
     },
   };
 
+  const ITEMS = {
+    diaper: {
+      pickupLines: [
+        '宝箱を あけた！',
+        'オムツを 見つけた！',
+        'オムツは ナナコに 履かせた方が よさそうね。',
+      ],
+      apply: () => { ROSTER.nanako.defenseBonus = (ROSTER.nanako.defenseBonus || 0) + 4; },
+      resultLine: () => 'ナナコの ぼうぎょりょくが あがった！',
+    },
+    mizotakuSticker: {
+      pickupLines: [
+        '宝箱を あけた！',
+        'ミゾタクの ステッカーを 見つけた！',
+        'これが あれば なんでも できるわ！',
+      ],
+      apply: () => { ROSTER.erina.level += 1; },
+      resultLine: () => `エリナは Lv.${ROSTER.erina.level} に あがった！`,
+    },
+  };
+  const openedChests = new Set();
+
+  function showDialogueSequence(lines, onDone) {
+    let i = 0;
+    function next() {
+      if (i >= lines.length) { if (onDone) onDone(); return; }
+      Overworld.showDialogue(lines[i++], next);
+    }
+    next();
+  }
+
+  function onChestOpen(obj, floorKey) {
+    const key = floorKey + ':' + obj.col + ':' + obj.row;
+    if (openedChests.has(key)) {
+      Overworld.showDialogue('もう なにも 入っていない…', null);
+      return;
+    }
+    openedChests.add(key);
+    const item = ITEMS[obj.item];
+    showDialogueSequence(item.pickupLines, () => {
+      item.apply();
+      Overworld.showDialogue(item.resultLine(), null);
+    });
+  }
+
   async function sha256Hex(text) {
     const enc = new TextEncoder().encode(text);
     const buf = await crypto.subtle.digest('SHA-256', enc);
@@ -96,10 +141,19 @@
     flags.ikukoDefeated = false;
   }
 
+  const INTRO_LINES = [
+    'わたしは ベビートレーナーの エリナ。',
+    '今日も 菜々子を トレーニングしないとだわ。',
+    'まずは 2階の 菜々子を てなずけて、',
+    'そのあとは パパと ママに 相手してもらおうかしら。',
+    '十字キーで うごいて、Aボタンで 話しかけよう。かいだんで 階を移動できるわ。',
+  ];
+
   function startNewGame() {
     resetFlags();
     Overworld.enterFloor('FLOOR_2');
     resumeOverworld();
+    showDialogueSequence(INTRO_LINES, null);
   }
 
   function resumeOverworld() {
@@ -263,7 +317,7 @@
       if (e.key === 'Enter') checkPassphrase();
     });
 
-    Overworld.init(document.getElementById('overworld-canvas'), { onTalk });
+    Overworld.init(document.getElementById('overworld-canvas'), { onTalk, onChestOpen });
     Overworld.enterFloor('FLOOR_2');
     Battle.init({ onEnd: handleBattleEnd });
     wireTouchControls();

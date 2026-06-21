@@ -131,6 +131,12 @@ const Overworld = (() => {
     if (npc && callbacks.onTalk) {
       AudioEngine.playConfirm();
       callbacks.onTalk(npc.id);
+      return;
+    }
+    const obj = objectAt(col, row);
+    if (obj && obj.item && callbacks.onChestOpen) {
+      AudioEngine.playConfirm();
+      callbacks.onChestOpen(obj, floorKey);
     }
   }
 
@@ -195,19 +201,44 @@ const Overworld = (() => {
     }
   }
 
-  function drawStairsIcon(col, row) {
+  function drawStairsIcon(stair) {
+    const col = stair.col, row = stair.row;
     const x = col * TILE, y = row * TILE;
+    const currentFloorNum = floorKey === 'FLOOR_1' ? 1 : 2;
+    const goingUp = stair.toFloor > currentFloorNum;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3);
+
+    ctx.save();
+    ctx.globalAlpha = 0.3 + 0.25 * pulse;
+    ctx.fillStyle = '#ffe27a';
+    ctx.beginPath();
+    ctx.ellipse(x + TILE / 2, y + TILE / 2, TILE * 0.65, TILE * 0.65, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.fillStyle = 'rgba(20,20,30,0.85)';
     ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
     ctx.fillStyle = '#e8d9a0';
     for (let i = 0; i < 4; i++) {
       ctx.fillRect(x + 4, y + 4 + i * 6, TILE - 8 - i * 5, 4);
     }
+
+    const bob = Math.sin(t * 4) * 3;
+    const labelY = y - 8 + bob;
+    const label = (goingUp ? '▲' : '▼') + ' かいだん';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.strokeText(label, x + TILE / 2, labelY);
+    ctx.fillStyle = '#fff8e0';
+    ctx.fillText(label, x + TILE / 2, labelY);
+    ctx.textAlign = 'left';
   }
 
   function drawCharSprite(img, px, py, bobOffset, flip) {
     if (!img || !img.complete || img.naturalWidth === 0) return;
-    const h = TILE * 1.6;
+    const h = TILE * 3.4;
     const w = h * (img.naturalWidth / img.naturalHeight);
     const dx = px + TILE / 2 - w / 2;
     const dy = py + TILE - h + bobOffset;
@@ -231,7 +262,7 @@ const Overworld = (() => {
     for (let r = 0; r < floor.rows; r++) {
       for (let c = 0; c < floor.cols; c++) drawGroundTile(c, r, floor.ground[r][c]);
     }
-    floor.stairs.forEach(s => drawStairsIcon(s.col, s.row));
+    floor.stairs.forEach(drawStairsIcon);
     floor.objects.forEach(drawObject);
 
     floor.npcs.forEach(npc => {

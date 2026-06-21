@@ -15,7 +15,10 @@ const Battle = (() => {
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-  function rollDamage(power) { return Math.max(1, Math.round(power + (Math.random() * 8 - 4))); }
+  function rollDamage(power, defender) {
+    const raw = power + (Math.random() * 8 - 4);
+    return Math.max(1, Math.round(raw - (defender && defender.defenseBonus || 0)));
+  }
 
   function init(opts) {
     onEndCallback = opts.onEnd;
@@ -165,17 +168,33 @@ const Battle = (() => {
     return { x: r.left - c.left + r.width / 2, y: r.top - c.top + r.height / 2 };
   }
 
-  function spawnParticles(emoji, originEl, animClass, count) {
+  function spawnParticles(emoji, originEl, mode, count, targetEl) {
     const pos = relPos(originEl, fx);
+    let dx = 0, dy = 0;
+    if (mode === 'fly' && targetEl) {
+      const tpos = relPos(targetEl, fx);
+      dx = tpos.x - pos.x;
+      dy = tpos.y - pos.y;
+    }
     for (let i = 0; i < count; i++) {
       const el = document.createElement('div');
-      el.className = 'fx-particle' + (animClass ? ' ' + animClass : '');
+      el.className = 'fx-particle' + (mode === 'fly' ? ' fly-to-target' : '');
       el.textContent = emoji;
       el.style.left = (pos.x + (Math.random() * 40 - 20)) + 'px';
       el.style.top = (pos.y + (Math.random() * 20 - 10)) + 'px';
+      if (mode === 'fly') {
+        el.style.setProperty('--dx', (dx + (Math.random() * 30 - 15)) + 'px');
+        el.style.setProperty('--dy', (dy + (Math.random() * 20 - 10)) + 'px');
+      }
       fx.appendChild(el);
       setTimeout(() => el.remove(), 1150);
     }
+  }
+
+  function lungeToward(casterEl) {
+    const cls = casterEl === playerSprite ? 'lunge-right' : 'lunge-left';
+    casterEl.classList.add(cls);
+    setTimeout(() => casterEl.classList.remove(cls), 470);
   }
 
   function spawnBeam(fromEl, toEl, color) {
@@ -213,7 +232,7 @@ const Battle = (() => {
     setTimeout(() => stage.classList.remove('shake-screen'), duration || 400);
   }
 
-  function playAnim(name) {
+  function playAnim(name, casterEl, targetEl) {
     return new Promise(resolve => {
       let duration = 500;
       switch (name) {
@@ -228,61 +247,58 @@ const Battle = (() => {
           break;
         }
         case 'kiss':
-          spawnParticles('💋', playerSprite, 'fly-to-baby', 5);
+          spawnParticles('💋', casterEl, 'fly', 5, targetEl);
           duration = 650;
           break;
         case 'lullaby':
-          spawnParticles('♪', babySprite, '', 6);
+          spawnParticles('♪', targetEl, '', 6);
           duration = 950;
           break;
         case 'hug':
-          playerSprite.classList.add('lunge-right');
-          spawnParticles('✨', babySprite, '', 4);
+          lungeToward(casterEl);
+          spawnParticles('✨', targetEl, '', 4);
           duration = 470;
-          setTimeout(() => playerSprite.classList.remove('lunge-right'), duration);
           break;
         case 'pee':
-          spawnBeam(babySprite, playerSprite, 'rgba(255,224,102,0.85)');
+          spawnBeam(casterEl, targetEl, 'rgba(255,224,102,0.85)');
           duration = 450;
           break;
         case 'poop':
-          spawnParticles('💩', babySprite, 'fly-to-player', 3);
+          spawnParticles('💩', casterEl, 'fly', 3, targetEl);
           duration = 650;
           break;
         case 'cry': case 'scold':
-          spawnRing(babySprite, 0, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
-          spawnRing(babySprite, 150, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
+          spawnRing(casterEl, 0, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
+          spawnRing(casterEl, 150, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
           shakeScreen(name === 'scold' ? 550 : 450);
           duration = name === 'scold' ? 800 : 700;
           break;
         case 'crawl': case 'vacuum':
-          babySprite.classList.add('lunge-left');
-          spawnParticles(name === 'vacuum' ? '🌀' : '💨', babySprite, '', 3);
+          lungeToward(casterEl);
+          spawnParticles(name === 'vacuum' ? '🌀' : '💨', casterEl, '', 3);
           duration = 470;
-          setTimeout(() => babySprite.classList.remove('lunge-left'), duration);
           break;
         case 'drill':
-          spawnParticles('🦷', playerSprite, 'fly-to-player', 4);
+          spawnParticles('🦷', casterEl, 'fly', 4, targetEl);
           shakeScreen(280);
           duration = 600;
           break;
         case 'injection':
-          spawnParticles('💉', babySprite, 'fly-to-player', 3);
+          spawnParticles('💉', casterEl, 'fly', 3, targetEl);
           duration = 550;
           break;
         case 'bike':
-          babySprite.classList.add('lunge-left');
-          spawnParticles('💨', babySprite, '', 5);
+          lungeToward(casterEl);
+          spawnParticles('💨', casterEl, '', 5);
           shakeScreen(400);
           duration = 520;
-          setTimeout(() => babySprite.classList.remove('lunge-left'), duration);
           break;
         case 'flyer':
-          spawnParticles('📄', babySprite, 'fly-to-player', 4);
+          spawnParticles('📄', casterEl, 'fly', 4, targetEl);
           duration = 600;
           break;
         case 'spicy':
-          spawnParticles('🌶️', babySprite, 'fly-to-player', 4);
+          spawnParticles('🌶️', casterEl, 'fly', 4, targetEl);
           shakeScreen(280);
           duration = 600;
           break;
@@ -297,13 +313,13 @@ const Battle = (() => {
     hideMoveMenu();
     const move = player.moves[index];
     await showMessage(move.flavor);
-    await playAnim(move.anim);
+    await playAnim(move.anim, playerSprite, babySprite);
     const hit = Math.random() < move.accuracy;
     if (!hit) {
       await showMessage('しかし こうげきは はずれた！');
     } else {
       if (move.power > 0) {
-        enemyHP = Math.max(0, enemyHP - rollDamage(move.power));
+        enemyHP = Math.max(0, enemyHP - rollDamage(move.power, enemy));
         updateHPBar('baby');
         AudioEngine.playHit();
         flinch('baby');
@@ -341,12 +357,12 @@ const Battle = (() => {
     }
     const move = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
     await showMessage(move.flavor);
-    await playAnim(move.anim);
+    await playAnim(move.anim, babySprite, playerSprite);
     const hit = Math.random() < move.accuracy;
     if (!hit) {
       await showMessage('しかし こうげきは はずれた！');
     } else {
-      playerHP = Math.max(0, playerHP - rollDamage(move.power));
+      playerHP = Math.max(0, playerHP - rollDamage(move.power, player));
       updateHPBar('player');
       AudioEngine.playHit();
       flinch('player');
