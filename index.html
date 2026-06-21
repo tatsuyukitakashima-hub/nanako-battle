@@ -54,16 +54,30 @@
       </div>
     </div>
 
+    <!-- 戦う相手選択 -->
+    <div id="select-screen" class="screen hidden">
+      <div class="select-wrap">
+        <h2 id="select-title">だれを 出しますか？</h2>
+        <div id="select-cards"></div>
+      </div>
+    </div>
+
     <!-- バトル -->
     <div id="battle-screen" class="screen hidden">
       <div id="battle-stage">
         <div class="hp-panel hp-panel-baby">
-          <div class="hp-name-row"><span id="baby-name">ヤンチャな ナナコ</span></div>
-          <div class="hp-bar-track"><div id="baby-hp-fill" class="hp-bar-fill"></div></div>
+          <div class="hp-name-row"><span id="baby-name">ヤンチャな ナナコ</span><span id="baby-level" class="level-tag">Lv.5</span></div>
+          <div class="hp-bar-row">
+            <div class="hp-bar-track"><div id="baby-hp-fill" class="hp-bar-fill"></div></div>
+            <div id="baby-status-badges" class="status-badges"></div>
+          </div>
         </div>
         <div class="hp-panel hp-panel-player">
-          <div class="hp-name-row"><span>エリナ</span></div>
-          <div class="hp-bar-track"><div id="player-hp-fill" class="hp-bar-fill"></div></div>
+          <div class="hp-name-row"><span id="player-name">エリナ</span><span id="player-level" class="level-tag">Lv.5</span></div>
+          <div class="hp-bar-row">
+            <div class="hp-bar-track"><div id="player-hp-fill" class="hp-bar-fill"></div></div>
+            <div id="player-status-badges" class="status-badges"></div>
+          </div>
         </div>
 
         <div id="baby-platform" class="platform platform-baby"></div>
@@ -104,6 +118,7 @@
   </div>
 
   <script src="js/audio.js"></script>
+  <script src="js/maps.js"></script>
   <script src="js/overworld.js"></script>
   <script src="js/battle.js"></script>
   <script src="js/main.js"></script>

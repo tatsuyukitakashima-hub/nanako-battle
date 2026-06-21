@@ -65,6 +65,26 @@ const AudioEngine = (() => {
   }
   function playBallThrow() { beep(300, 0.12, 'triangle', 0.25); }
 
+  function noiseHit(startAt, dur, peakGain) {
+    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(peakGain, startAt);
+    gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 1200;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    src.start(startAt);
+    src.stop(startAt + dur + 0.01);
+  }
+
   // ループ再生(先読みスケジューリング)
   function scheduleLoop(loop, token) {
     if (!ctx || token.id !== currentLoopId) return;
@@ -82,9 +102,21 @@ const AudioEngine = (() => {
       return t - startAt;
     }
 
-    const melodyLen = scheduleLine(loop.melody, loop.melodyType || 'square', loop.melodyGain ?? 0.22);
-    const bassLen = loop.bassline ? scheduleLine(loop.bassline, loop.bassType || 'triangle', loop.bassGain ?? 0.2) : melodyLen;
-    const loopLen = Math.max(melodyLen, bassLen);
+    function schedulePercussion(line, gain) {
+      let t = startAt;
+      line.forEach(step => {
+        const dur = step.beats * beatDur;
+        if (step.hit) noiseHit(t, Math.min(dur * 0.6, 0.12), gain);
+        t += dur;
+      });
+      return t - startAt;
+    }
+
+    const lens = [scheduleLine(loop.melody, loop.melodyType || 'square', loop.melodyGain ?? 0.22)];
+    if (loop.bassline) lens.push(scheduleLine(loop.bassline, loop.bassType || 'triangle', loop.bassGain ?? 0.2));
+    if (loop.harmony) lens.push(scheduleLine(loop.harmony, loop.harmonyType || 'triangle', loop.harmonyGain ?? 0.14));
+    if (loop.percussion) lens.push(schedulePercussion(loop.percussion, loop.percussionGain ?? 0.3));
+    const loopLen = Math.max(...lens);
 
     token.timeoutId = setTimeout(() => {
       if (token.id === currentLoopId) scheduleLoop(loop, token);
@@ -142,11 +174,48 @@ const AudioEngine = (() => {
     ]
   };
 
+  // ボス戦(ヒロシ・イクコ): 四天王/ジムリーダー戦のような速さ・音数で緊張感を出すオリジナル新曲
+  const BOSS_THEME = {
+    tempo: 192,
+    melodyType: 'square', melodyGain: 0.2,
+    bassType: 'square', bassGain: 0.18,
+    harmonyType: 'triangle', harmonyGain: 0.13,
+    percussionGain: 0.32,
+    melody: [
+      { note: 'E5', beats: 0.5 }, { note: 'G5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'C5', beats: 0.5 },
+      { note: 'D5', beats: 0.5 }, { note: 'F5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'A4', beats: 0.5 },
+      { note: 'E5', beats: 0.5 }, { note: 'G5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'C5', beats: 0.5 },
+      { note: 'B4', beats: 1 }, { note: '-', beats: 1 },
+      { note: 'G5', beats: 0.5 }, { note: 'F5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: 'D5', beats: 0.5 },
+      { note: 'C5', beats: 0.5 }, { note: 'D5', beats: 0.5 }, { note: 'E5', beats: 0.5 }, { note: '-', beats: 0.5 },
+      { note: 'A4', beats: 1 }, { note: 'G4', beats: 1 },
+      { note: 'C5', beats: 2 }
+    ],
+    bassline: [
+      { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 }, { note: 'A3', beats: 1 },
+      { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 }, { note: 'F3', beats: 1 },
+      { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 }, { note: 'C3', beats: 1 },
+      { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }, { note: 'G3', beats: 1 }
+    ],
+    harmony: [
+      { note: 'A4', beats: 2 }, { note: 'E4', beats: 2 },
+      { note: 'F4', beats: 2 }, { note: 'C4', beats: 2 },
+      { note: 'C5', beats: 2 }, { note: 'G4', beats: 2 },
+      { note: 'G4', beats: 4 }
+    ],
+    percussion: [
+      { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
+      { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
+      { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 },
+      { hit: false, beats: 1 }, { hit: true, beats: 1 }, { hit: false, beats: 1 }, { hit: true, beats: 1 }
+    ]
+  };
+
   return {
     ensureContext,
     playSelect, playConfirm, playHit, playFaint, playCatchJingle, playBallThrow,
     playOverworldTheme: () => playLoop(OVERWORLD_THEME),
-    playBattleTheme: () => playLoop(BATTLE_THEME),
+    playBattleTheme: (boss) => playLoop(boss ? BOSS_THEME : BATTLE_THEME),
     stopMusic,
   };
 })();

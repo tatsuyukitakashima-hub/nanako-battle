@@ -241,6 +241,25 @@ canvas {
 }
 #ending-text { font-size: 1.1rem; margin-bottom: 24px; white-space: pre-line; }
 
+/* ---------- キャラ選択 ---------- */
+#select-screen { background: linear-gradient(160deg, #d8e8ff 0%, #fff1d6 100%); }
+.select-wrap { text-align: center; padding: 24px; color: #333; }
+.select-wrap h2 { margin-bottom: 18px; }
+#select-cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.select-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  width: 130px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  border: 3px solid transparent;
+}
+.select-card:active { border-color: #ff6b9d; transform: translateY(2px); }
+.select-card img { width: 90px; height: 90px; object-fit: contain; margin-bottom: 8px; }
+.select-card .select-name { font-weight: bold; font-size: 0.95rem; }
+.select-card .select-level { font-size: 0.75rem; color: #777; }
+.select-card:disabled, .select-card.disabled { opacity: 0.4; }
+
 /* タイトルのキャラのぞき見 */
 .title-peek {
   position: absolute;
@@ -300,11 +319,25 @@ canvas {
 }
 .hp-panel-baby { top: 4%; left: 4%; }
 .hp-panel-player { top: 30%; right: 4%; }
-.hp-name-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; }
-.hp-bar-track { background: #ccc; border-radius: 6px; height: 8px; overflow: hidden; }
+.hp-name-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; display: flex; align-items: baseline; gap: 6px; }
+.level-tag { font-size: 0.7rem; font-weight: normal; color: #666; }
+.hp-bar-row { display: flex; align-items: center; gap: 6px; }
+.hp-bar-track { background: #ccc; border-radius: 6px; height: 8px; overflow: hidden; flex: 1; }
 .hp-bar-fill { background: #4caf50; height: 100%; width: 100%; transition: width 0.5s ease, background 0.5s ease; }
 .hp-bar-fill.low { background: #ff9800; }
 .hp-bar-fill.critical { background: #e53935; }
+.status-badges { display: flex; gap: 3px; flex-shrink: 0; }
+.status-badge {
+  font-size: 0.62rem;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 5px;
+  color: #fff;
+  white-space: nowrap;
+}
+.status-badge.poison { background: #8e44ad; }
+.status-badge.sleep { background: #3498db; }
+.status-badge.charm { background: #ff6b9d; }
 
 #fx-layer {
   position: absolute;

@@ -1,26 +1,17 @@
-// バトルロジック(コマンド/4技/捕獲/HP)とDOMアニメーション
+// バトルロジック(コマンド/4技/捕獲/HP/レベル/状態異常)とDOMアニメーション
 const Battle = (() => {
-  const MAX_HP = 100;
+  function maxHpForLevel(level) { return 80 + level * 4; }
 
-  const ERINA_MOVES = [
-    { name: '鋭い眼光', power: 18, accuracy: 1.0, anim: 'glare', flavor: '瑛里奈の 鋭い眼光！' },
-    { name: '投げキッス', power: 8, accuracy: 1.0, anim: 'kiss', effect: 'charm', effectChance: 0.5, flavor: '瑛里奈は そっと投げキッスをした！' },
-    { name: '子守唄', power: 0, accuracy: 1.0, anim: 'lullaby', effect: 'sleep', flavor: '瑛里奈は やさしく子守唄をうたった…' },
-    { name: 'だっこ攻撃', power: 26, accuracy: 0.9, anim: 'hug', flavor: '瑛里奈の だっこ攻撃！' },
-  ];
-  const NANAKO_MOVES = [
-    { name: 'おしっこビーム', power: 16, accuracy: 1.0, anim: 'pee', flavor: 'ナナコの おしっこビーム！' },
-    { name: 'うんちなげ', power: 10, accuracy: 0.95, anim: 'poop', effect: 'poison', effectChance: 0.6, flavor: 'ナナコは うんちを投げつけた！' },
-    { name: 'なきごえアタック', power: 24, accuracy: 0.9, anim: 'cry', flavor: 'ナナコの なきごえアタック！' },
-    { name: 'はいはいタックル', power: 18, accuracy: 1.0, anim: 'crawl', flavor: 'ナナコの はいはいタックル！' },
-  ];
-
-  let playerHP, babyHP, babyStatus, babySleepTurns, playerPoisonTurns, turnLock;
+  let player, enemy; // { name, level, sprite, moves, defeatedSprite? }
+  let allowCatch = false;
+  let playerHP, playerMaxHP, enemyHP, enemyMaxHP;
+  let enemyStatus, enemySleepTurns, playerPoisonTurns, turnLock;
   let onEndCallback = null;
 
   let stage, fx, babySprite, playerSprite, ballSprite;
-  let babyHpFill, playerHpFill;
-  let msgBox, msgText, commandMenu, moveMenu;
+  let babyHpFill, playerHpFill, babyNameEl, playerNameEl, babyLevelEl, playerLevelEl;
+  let babyStatusBadges, playerStatusBadges;
+  let msgBox, msgText, commandMenu, moveMenu, catchBtn;
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -35,10 +26,17 @@ const Battle = (() => {
     ballSprite = document.getElementById('ball-sprite');
     babyHpFill = document.getElementById('baby-hp-fill');
     playerHpFill = document.getElementById('player-hp-fill');
+    babyNameEl = document.getElementById('baby-name');
+    playerNameEl = document.getElementById('player-name');
+    babyLevelEl = document.getElementById('baby-level');
+    playerLevelEl = document.getElementById('player-level');
+    babyStatusBadges = document.getElementById('baby-status-badges');
+    playerStatusBadges = document.getElementById('player-status-badges');
     msgBox = document.getElementById('battle-message-box');
     msgText = document.getElementById('battle-message-text');
     commandMenu = document.getElementById('command-menu');
     moveMenu = document.getElementById('move-menu');
+    catchBtn = commandMenu.querySelector('[data-cmd="catch"]');
 
     commandMenu.querySelectorAll('.cmd-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -51,22 +49,35 @@ const Battle = (() => {
     });
   }
 
-  async function start() {
-    playerHP = MAX_HP;
-    babyHP = MAX_HP;
-    babyStatus = null;
-    babySleepTurns = 0;
+  async function start(config) {
+    player = config.player;
+    enemy = config.enemy;
+    allowCatch = !!config.allowCatch;
+    playerMaxHP = maxHpForLevel(player.level);
+    enemyMaxHP = maxHpForLevel(enemy.level);
+    playerHP = playerMaxHP;
+    enemyHP = enemyMaxHP;
+    enemyStatus = null;
+    enemySleepTurns = 0;
     playerPoisonTurns = 0;
     turnLock = false;
-    babySprite.src = 'images/nanako_normal.png';
-    playerSprite.src = 'images/erina_normal.png';
+
+    babySprite.src = enemy.sprite;
+    playerSprite.src = player.sprite;
+    babyNameEl.textContent = enemy.name;
+    playerNameEl.textContent = player.name;
+    babyLevelEl.textContent = 'Lv.' + enemy.level;
+    playerLevelEl.textContent = 'Lv.' + player.level;
     updateHPBar('baby');
     updateHPBar('player');
+    updateStatusBadges('baby');
+    updateStatusBadges('player');
     hideMoveMenu();
-    ballSprite.classList.add('hidden');
+    catchBtn.classList.toggle('hidden', !allowCatch);
     ballSprite.className = 'ball-sprite hidden';
-    AudioEngine.playBattleTheme();
-    await showMessage('ナナコが あらわれた！');
+
+    AudioEngine.playBattleTheme(enemy.bossTheme);
+    await showMessage(`${enemy.name} が あらわれた！`);
     showCommandMenu();
   }
 
@@ -83,7 +94,7 @@ const Battle = (() => {
   function openMoveMenu() {
     hideCommandMenu();
     moveMenu.innerHTML = '';
-    ERINA_MOVES.forEach((move, i) => {
+    player.moves.forEach((move, i) => {
       const btn = document.createElement('button');
       btn.className = 'move-btn erina';
       btn.textContent = move.name;
@@ -120,12 +131,26 @@ const Battle = (() => {
 
   function updateHPBar(who) {
     const fill = who === 'baby' ? babyHpFill : playerHpFill;
-    const hp = who === 'baby' ? babyHP : playerHP;
-    const pct = clamp(hp / MAX_HP * 100, 0, 100);
+    const hp = who === 'baby' ? enemyHP : playerHP;
+    const maxHp = who === 'baby' ? enemyMaxHP : playerMaxHP;
+    const pct = clamp(hp / maxHp * 100, 0, 100);
     fill.style.width = pct + '%';
     fill.classList.remove('low', 'critical');
     if (pct <= 20) fill.classList.add('critical');
     else if (pct <= 50) fill.classList.add('low');
+  }
+
+  const STATUS_LABEL = { sleep: 'ねむり', poison: 'どく', charm: 'メロメロ' };
+  function updateStatusBadges(who) {
+    const container = who === 'baby' ? babyStatusBadges : playerStatusBadges;
+    const status = who === 'baby' ? enemyStatus : (playerPoisonTurns > 0 ? 'poison' : null);
+    container.innerHTML = '';
+    if (status && STATUS_LABEL[status]) {
+      const badge = document.createElement('span');
+      badge.className = 'status-badge ' + status;
+      badge.textContent = STATUS_LABEL[status];
+      container.appendChild(badge);
+    }
   }
 
   function flinch(who) {
@@ -170,11 +195,12 @@ const Battle = (() => {
     setTimeout(() => beam.remove(), 450);
   }
 
-  function spawnRing(originEl, delay) {
+  function spawnRing(originEl, delay, color) {
     setTimeout(() => {
       const pos = relPos(originEl, fx);
       const ring = document.createElement('div');
       ring.className = 'fx-ring';
+      if (color) ring.style.borderColor = color;
       ring.style.left = pos.x + 'px';
       ring.style.top = pos.y + 'px';
       fx.appendChild(ring);
@@ -191,8 +217,11 @@ const Battle = (() => {
     return new Promise(resolve => {
       let duration = 500;
       switch (name) {
-        case 'glare': {
-          const g = document.createElement('div'); g.className = 'fx-glare'; fx.appendChild(g);
+        case 'glare': case 'xray': {
+          const g = document.createElement('div');
+          g.className = 'fx-glare';
+          if (name === 'xray') g.style.background = 'radial-gradient(circle at 75% 25%, rgba(120,200,255,0.9), rgba(120,200,255,0) 55%)';
+          fx.appendChild(g);
           shakeScreen(300);
           duration = 420;
           setTimeout(() => g.remove(), duration);
@@ -220,17 +249,42 @@ const Battle = (() => {
           spawnParticles('💩', babySprite, 'fly-to-player', 3);
           duration = 650;
           break;
-        case 'cry':
-          spawnRing(babySprite, 0);
-          spawnRing(babySprite, 150);
-          shakeScreen(450);
-          duration = 700;
+        case 'cry': case 'scold':
+          spawnRing(babySprite, 0, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
+          spawnRing(babySprite, 150, name === 'scold' ? 'rgba(255,210,80,0.9)' : undefined);
+          shakeScreen(name === 'scold' ? 550 : 450);
+          duration = name === 'scold' ? 800 : 700;
           break;
-        case 'crawl':
+        case 'crawl': case 'vacuum':
           babySprite.classList.add('lunge-left');
-          spawnParticles('💨', babySprite, '', 3);
+          spawnParticles(name === 'vacuum' ? '🌀' : '💨', babySprite, '', 3);
           duration = 470;
           setTimeout(() => babySprite.classList.remove('lunge-left'), duration);
+          break;
+        case 'drill':
+          spawnParticles('🦷', playerSprite, 'fly-to-player', 4);
+          shakeScreen(280);
+          duration = 600;
+          break;
+        case 'injection':
+          spawnParticles('💉', babySprite, 'fly-to-player', 3);
+          duration = 550;
+          break;
+        case 'bike':
+          babySprite.classList.add('lunge-left');
+          spawnParticles('💨', babySprite, '', 5);
+          shakeScreen(400);
+          duration = 520;
+          setTimeout(() => babySprite.classList.remove('lunge-left'), duration);
+          break;
+        case 'flyer':
+          spawnParticles('📄', babySprite, 'fly-to-player', 4);
+          duration = 600;
+          break;
+        case 'spicy':
+          spawnParticles('🌶️', babySprite, 'fly-to-player', 4);
+          shakeScreen(280);
+          duration = 600;
           break;
       }
       setTimeout(resolve, duration);
@@ -241,7 +295,7 @@ const Battle = (() => {
     if (turnLock) return;
     turnLock = true;
     hideMoveMenu();
-    const move = ERINA_MOVES[index];
+    const move = player.moves[index];
     await showMessage(move.flavor);
     await playAnim(move.anim);
     const hit = Math.random() < move.accuracy;
@@ -249,40 +303,43 @@ const Battle = (() => {
       await showMessage('しかし こうげきは はずれた！');
     } else {
       if (move.power > 0) {
-        babyHP = Math.max(0, babyHP - rollDamage(move.power));
+        enemyHP = Math.max(0, enemyHP - rollDamage(move.power));
         updateHPBar('baby');
         AudioEngine.playHit();
         flinch('baby');
       }
-      if (move.effect === 'charm' && !babyStatus && Math.random() < move.effectChance) {
-        babyStatus = 'charm';
-        await showMessage('ナナコは メロメロに なった♡');
+      if (move.effect === 'charm' && !enemyStatus && Math.random() < move.effectChance) {
+        enemyStatus = 'charm';
+        updateStatusBadges('baby');
+        await showMessage(`${enemy.name}は メロメロに なった♡`);
       } else if (move.effect === 'sleep') {
-        babyStatus = 'sleep';
-        babySleepTurns = 2 + Math.floor(Math.random() * 2);
-        await showMessage('ナナコは ねむって しまった…');
+        enemyStatus = 'sleep';
+        enemySleepTurns = 2 + Math.floor(Math.random() * 2);
+        updateStatusBadges('baby');
+        await showMessage(`${enemy.name}は ねむって しまった…`);
       }
     }
-    if (babyHP <= 0) { await onBabyFainted(); return; }
+    if (enemyHP <= 0) { await onEnemyFainted(); return; }
     await wait(350);
-    await babyTurn();
+    await enemyTurn();
   }
 
-  async function babyTurn() {
-    if (babyStatus === 'sleep' && babySleepTurns > 0) {
-      babySleepTurns--;
-      await showMessage('ナナコは ねむっている…');
-      if (babySleepTurns <= 0) babyStatus = null;
+  async function enemyTurn() {
+    if (enemyStatus === 'sleep' && enemySleepTurns > 0) {
+      enemySleepTurns--;
+      await showMessage(`${enemy.name}は ねむっている…`);
+      if (enemySleepTurns <= 0) { enemyStatus = null; updateStatusBadges('baby'); }
       await endTurnCycle();
       return;
     }
-    if (babyStatus === 'charm') {
-      babyStatus = null;
-      await showMessage('ナナコは メロメロで うごけない！');
+    if (enemyStatus === 'charm') {
+      enemyStatus = null;
+      updateStatusBadges('baby');
+      await showMessage(`${enemy.name}は メロメロで うごけない！`);
       await endTurnCycle();
       return;
     }
-    const move = NANAKO_MOVES[Math.floor(Math.random() * NANAKO_MOVES.length)];
+    const move = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
     await showMessage(move.flavor);
     await playAnim(move.anim);
     const hit = Math.random() < move.accuracy;
@@ -295,7 +352,8 @@ const Battle = (() => {
       flinch('player');
       if (move.effect === 'poison' && playerPoisonTurns === 0 && Math.random() < move.effectChance) {
         playerPoisonTurns = 3;
-        await showMessage('エリナは どくを 浴びてしまった…');
+        updateStatusBadges('player');
+        await showMessage(`${player.name}は ダメージ状態に なってしまった…`);
       }
     }
     if (playerHP <= 0) { await onPlayerFainted(); return; }
@@ -307,7 +365,8 @@ const Battle = (() => {
       playerPoisonTurns--;
       playerHP = Math.max(0, playerHP - 6);
       updateHPBar('player');
-      await showMessage('エリナは どくの ダメージを受けている…');
+      if (playerPoisonTurns === 0) updateStatusBadges('player');
+      await showMessage(`${player.name}は ダメージで くるしんでいる…`);
       if (playerHP <= 0) { await onPlayerFainted(); return; }
     }
     turnLock = false;
@@ -315,7 +374,7 @@ const Battle = (() => {
   }
 
   async function attemptCatch() {
-    if (turnLock) return;
+    if (turnLock || !allowCatch) return;
     turnLock = true;
     hideCommandMenu();
     await showMessage('なかよしボールを 投げた！');
@@ -323,14 +382,14 @@ const Battle = (() => {
     ballSprite.className = 'ball-sprite throwing';
     ballSprite.classList.remove('hidden');
     await wait(600);
-    const chance = clamp(0.15 + 0.7 * (1 - babyHP / MAX_HP), 0.15, 0.9);
+    const chance = clamp(0.15 + 0.7 * (1 - enemyHP / enemyMaxHP), 0.15, 0.9);
     const success = Math.random() < chance;
     ballSprite.className = 'ball-sprite wiggle';
     await wait(success ? 900 : 600);
     if (success) {
       ballSprite.className = 'ball-sprite hidden';
       AudioEngine.playCatchJingle();
-      await showMessage('やった！ ナナコを つかまえた！');
+      await showMessage(`やった！ ${enemy.shortName || enemy.name}を つかまえた！`);
       onEndCallback('caught');
     } else {
       ballSprite.className = 'ball-sprite pop';
@@ -338,7 +397,7 @@ const Battle = (() => {
       ballSprite.className = 'ball-sprite hidden';
       await showMessage('あ！ ボールから 飛び出して しまった！');
       await wait(300);
-      await babyTurn();
+      await enemyTurn();
     }
   }
 
@@ -346,23 +405,23 @@ const Battle = (() => {
     if (turnLock) return;
     turnLock = true;
     hideCommandMenu();
-    await showMessage('瑛里奈は そそくさと にげだした…');
+    await showMessage(`${player.name}は そそくさと にげだした…`);
     onEndCallback('ran');
   }
 
-  async function onBabyFainted() {
-    babySprite.src = 'images/nanako_angry.png';
+  async function onEnemyFainted() {
+    if (enemy.defeatedSprite) babySprite.src = enemy.defeatedSprite;
     stage.classList.add('flash-red');
     await wait(350);
     stage.classList.remove('flash-red');
     AudioEngine.playFaint();
-    await showMessage('ナナコ は はらを たてた！ 「ばぶーっ！！」');
+    await showMessage(enemy.faintLine || `${enemy.name} を たおした！`);
     onEndCallback('defeated');
   }
 
   async function onPlayerFainted() {
     AudioEngine.playFaint();
-    await showMessage('エリナは つかれて ねむってしまった…');
+    await showMessage(`${player.name}は つかれて うごけなくなった…`);
     onEndCallback('lost');
   }
 
