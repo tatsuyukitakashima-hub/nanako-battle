@@ -18,6 +18,17 @@ html, body {
 
 .hidden { display: none !important; }
 
+#transition-flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.16s ease;
+}
+#transition-flash.active { opacity: 1; }
+
 .screen {
   position: absolute;
   inset: 0;

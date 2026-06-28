@@ -143,11 +143,23 @@
     document.getElementById('lock-screen').classList.toggle('hidden', id !== 'lock-screen');
     document.getElementById('game-root').classList.toggle('hidden', id !== 'game-root');
   }
+  function flashTransition(callback) {
+    const flash = document.getElementById('transition-flash');
+    flash.classList.add('active');
+    setTimeout(() => {
+      callback();
+      requestAnimationFrame(() => flash.classList.remove('active'));
+    }, 170);
+  }
+
   function showGameScreen(id) {
-    ['title-screen', 'overworld-screen', 'select-screen', 'battle-screen', 'ending-screen'].forEach(s => {
-      document.getElementById(s).classList.toggle('hidden', s !== id);
+    if (id === currentScreen) return;
+    flashTransition(() => {
+      ['title-screen', 'overworld-screen', 'select-screen', 'battle-screen', 'ending-screen'].forEach(s => {
+        document.getElementById(s).classList.toggle('hidden', s !== id);
+      });
+      currentScreen = id;
     });
-    currentScreen = id;
   }
 
   function enterGame() {
@@ -359,7 +371,14 @@
       if (e.key === 'Enter') checkPassphrase();
     });
 
-    Overworld.init(document.getElementById('overworld-canvas'), { onTalk, onChestOpen, onPhoneUse });
+    Overworld.init(document.getElementById('overworld-canvas'), {
+      onTalk, onChestOpen, onPhoneUse,
+      onFloorChange: () => {
+        const flash = document.getElementById('transition-flash');
+        flash.classList.add('active');
+        setTimeout(() => flash.classList.remove('active'), 220);
+      },
+    });
     Overworld.enterFloor('FLOOR_2');
     Battle.init({ onEnd: handleBattleEnd });
     wireTouchControls();

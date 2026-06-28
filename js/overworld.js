@@ -80,7 +80,7 @@ const Overworld = (() => {
 
   function isWalkable(col, row) {
     if (row < 0 || row >= floor.rows || col < 0 || col >= floor.cols) return false;
-    if (floor.ground[row][col] === Maps.GROUND.WALL) return false;
+    if (Maps.SOLID_GROUND.has(floor.ground[row][col])) return false;
     if (objectAt(col, row)) return false;
     if (npcAt(col, row)) return false;
     return true;
@@ -151,6 +151,7 @@ const Overworld = (() => {
   const SPEED = 220;
 
   function update(dt) {
+    updateDust(dt);
     if (player.moving) {
       const targetX = player.targetCol * TILE;
       const targetY = player.targetRow * TILE;
@@ -164,6 +165,7 @@ const Overworld = (() => {
         player.col = player.targetCol;
         player.row = player.targetRow;
         player.moving = false;
+        spawnDust(player.x + TILE / 2, player.y + TILE - 4);
         const stair = stairsAt(player.col, player.row);
         if (stair) {
           enterFloor('FLOOR_' + stair.toFloor, stair.toCol, stair.toRow);
@@ -262,10 +264,11 @@ const Overworld = (() => {
     ctx.textAlign = 'left';
   }
 
-  function drawCharSprite(img, px, py, bobOffset, flip) {
+  function drawCharSprite(img, px, py, bobOffset, flip, wobble) {
     if (!img || !img.complete || img.naturalWidth === 0) return;
+    const sx = wobble || 1;
     const h = TILE * 3.4;
-    const w = h * (img.naturalWidth / img.naturalHeight);
+    const w = (h * (img.naturalWidth / img.naturalHeight)) * sx;
     const dx = px + TILE / 2 - w / 2;
     const dy = py + TILE - h + bobOffset;
     ctx.save();
@@ -283,6 +286,28 @@ const Overworld = (() => {
     ctx.restore();
   }
 
+  let dustParticles = [];
+  function spawnDust(x, y) {
+    for (let i = 0; i < 3; i++) {
+      dustParticles.push({ x: x + (Math.random() * 10 - 5), y: y + (Math.random() * 4 - 2), age: 0, maxAge: 0.32 + Math.random() * 0.1 });
+    }
+  }
+  function updateDust(dt) {
+    dustParticles.forEach(p => p.age += dt);
+    dustParticles = dustParticles.filter(p => p.age < p.maxAge);
+  }
+  function renderDust() {
+    dustParticles.forEach(p => {
+      const k = p.age / p.maxAge;
+      ctx.globalAlpha = (1 - k) * 0.45;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - k * 8, 3 + k * 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let r = 0; r < floor.rows; r++) {
@@ -296,8 +321,11 @@ const Overworld = (() => {
       drawCharSprite(npcImages[npc.id], npc.col * TILE, npc.row * TILE, bob, npc.facing === 'right');
     });
 
+    renderDust();
+
     const playerBob = player.moving ? Math.abs(Math.sin(t * 10)) * 3 : 0;
-    drawCharSprite(playerImg, player.x, player.y, -playerBob, player.dir === 'right');
+    const playerWobble = player.moving ? 1 + Math.sin(t * 14) * 0.05 : 1;
+    drawCharSprite(playerImg, player.x, player.y, -playerBob, player.dir === 'right', playerWobble);
   }
 
   function loop(timestamp) {
